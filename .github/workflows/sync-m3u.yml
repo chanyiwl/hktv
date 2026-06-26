@@ -1,0 +1,35 @@
+name: 自动同步 hk_live.m3u
+permissions:
+  contents: write
+on:
+  schedule:
+    # 每4小时自动同步一次，可自行调整
+    - cron: '0 */4 * * *'
+  workflow_dispatch: # 支持手动一键触发同步
+
+env:
+  SOURCE_REPO: "sammy0101/hk-iptv-auto"
+  SOURCE_BRANCH: "main"
+  SOURCE_FILE: "hk_live.m3u"
+  TARGET_FILE: "hk_live.m3u" # 本地保存同名，可改名
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取本仓库代码
+        uses: actions/checkout@v4
+
+      - name: 下载上游最新m3u文件
+        run: |
+          curl -sL https://raw.githubusercontent.com/${{ env.SOURCE_REPO }}/${{ env.SOURCE_BRANCH }}/${{ env.SOURCE_FILE }} -o ${{ env.TARGET_FILE }}
+
+      - name: 提交更新并推送
+        run: |
+          git config --global user.name "IPTV Auto Sync"
+          git config --global user.email "sync-bot@github.com"
+          git add ${{ env.TARGET_FILE }}
+          # 文件无变更则直接退出不提交
+          git diff --cached --quiet && exit 0
+          git commit -m "自动同步最新频道列表 hk_live.m3u"
+          git push origin HEAD
